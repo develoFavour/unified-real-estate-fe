@@ -16,19 +16,45 @@ export interface User {
 
 interface LoginResponse {
   token: string;
+  refresh_token: string;
   user: User;
 }
 
+interface LoginRequest {
+  email: string;
+  password: string;
+}
+
+type RegisterRequest = Record<string, unknown>;
+
+interface ResetPasswordRequest {
+  token: string;
+  new_password: string;
+}
+
 export const authApi = {
-  register: async (data: any) => {
+  register: async (data: RegisterRequest) => {
     return api.post(ENDPOINTS.AUTH.REGISTER, data);
   },
 
-  login: async (data: any) => {
+  login: async (data: LoginRequest) => {
     const authData = await api.post<LoginResponse>(ENDPOINTS.AUTH.LOGIN, data);
 
     // Set cookie for middleware access
     Cookies.set('token', authData.token, { expires: 7 });
+    Cookies.set('refresh_token', authData.refresh_token, { expires: 7 });
+    Cookies.set('user_role', authData.user.role, { expires: 7 });
+
+    return authData;
+  },
+
+  refreshToken: async (refreshToken: string) => {
+    const authData = await api.post<LoginResponse>(ENDPOINTS.AUTH.REFRESH, {
+      refresh_token: refreshToken,
+    });
+
+    Cookies.set('token', authData.token, { expires: 7 });
+    Cookies.set('refresh_token', authData.refresh_token, { expires: 7 });
     Cookies.set('user_role', authData.user.role, { expires: 7 });
 
     return authData;
@@ -36,6 +62,7 @@ export const authApi = {
 
   logout: () => {
     Cookies.remove('token');
+    Cookies.remove('refresh_token');
     Cookies.remove('user_role');
     window.location.href = '/login';
   },
@@ -48,7 +75,7 @@ export const authApi = {
     return api.post(ENDPOINTS.AUTH.FORGOT_PASSWORD, { email });
   },
 
-  resetPassword: (data: any) => {
+  resetPassword: (data: ResetPasswordRequest) => {
     return api.post(ENDPOINTS.AUTH.RESET_PASSWORD, data);
   },
 

@@ -6,7 +6,7 @@ import { User } from '@/services/auth';
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
-  setAuth: (user: User, token: string) => void;
+  setAuth: (user: User, token: string, refreshToken?: string) => void;
   updateUser: (user: User) => void;
   logout: () => void;
 }
@@ -16,9 +16,12 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      setAuth: (user, token) => {
+      setAuth: (user, token, refreshToken) => {
         // Set cookies for middleware
         Cookies.set('token', token, { expires: 7 });
+        if (refreshToken) {
+          Cookies.set('refresh_token', refreshToken, { expires: 7 });
+        }
         Cookies.set('user_role', user.role, { expires: 7 });
         
         set({ user, isAuthenticated: true });
@@ -28,6 +31,7 @@ export const useAuthStore = create<AuthState>()(
       },
       logout: () => {
         Cookies.remove('token');
+        Cookies.remove('refresh_token');
         Cookies.remove('user_role');
         set({ user: null, isAuthenticated: false });
         window.location.href = '/login';
