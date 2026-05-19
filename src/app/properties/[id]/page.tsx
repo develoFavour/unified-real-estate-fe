@@ -2,7 +2,7 @@
 
 import { useEffect, useState, use } from "react";
 import Image from "next/image";
-import { MapPin, BedDouble, Bath, Square, Calendar, ShieldCheck, Phone, ArrowLeft, Loader2, Building2, MessageSquare } from "lucide-react";
+import { MapPin, BedDouble, Bath, Square, Calendar, ShieldCheck, Phone, ArrowLeft, Loader2, Building2, MessageSquare, CreditCard } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api/methods";
 import { ENDPOINTS } from "@/constants/endpoints.const";
@@ -43,6 +43,14 @@ interface LeaseRequest {
   status: string;
 }
 
+interface Invoice {
+  id: string;
+  property_id: string;
+  type: string;
+  status: string;
+  amount: number;
+}
+
 interface WalletData {
   pin_set_at?: string | null;
 }
@@ -53,15 +61,17 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
   const { id } = use(params);
   const [property, setProperty] = useState<Property | null>(null);
   const [leaseRequests, setLeaseRequests] = useState<LeaseRequest[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchProperty = async () => {
       try {
-        const [propertyRes, requestRes, walletRes] = await Promise.allSettled([
+        const [propertyRes, requestRes, invoiceRes, walletRes] = await Promise.allSettled([
           api.get<Property>(ENDPOINTS.PROPERTIES.GET_ONE(id)),
           api.get<LeaseRequest[]>("/tenant/lease-requests"),
+          api.get<Invoice[]>("/tenant/invoices"),
           api.get<WalletData>("/wallet"),
         ]);
 
@@ -70,6 +80,9 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
         }
         if (requestRes.status === "fulfilled") {
           setLeaseRequests(requestRes.value || []);
+        }
+        if (invoiceRes.status === "fulfilled") {
+          setInvoices(invoiceRes.value || []);
         }
         if (walletRes.status === "fulfilled") {
           setWallet(walletRes.value);
@@ -198,7 +211,13 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
     request.property_id === property.id &&
     ["PENDING", "APPROVED"].includes(request.status)
   ));
-  const leaseAlreadyRequested = Boolean(existingLeaseRequest);
+  const pendingLeaseRequest = existingLeaseRequest?.status === "PENDING" ? existingLeaseRequest : null;
+  const approvedLeaseRequest = existingLeaseRequest?.status === "APPROVED" ? existingLeaseRequest : null;
+  const pendingRentInvoice = invoices.find((invoice) => (
+    invoice.property_id === property.id &&
+    invoice.type === "RENT" &&
+    ["PENDING", "OVERDUE"].includes(invoice.status)
+  ));
 
   return (
     <div className="min-h-screen bg-background text-foreground pb-24 animate-in fade-in duration-700">
@@ -384,20 +403,43 @@ export default function PropertyDetailPage({ params }: { params: Promise<{ id: s
               {property.status === "AVAILABLE" && (
                 <div className="mb-10 space-y-4">
                   <h3 className="text-xl font-bold font-heading">
-                    {property.listing_type === "SALE" ? "Reserve Property" : "Request Lease"}
+                    {property.listing_type === "SALE"
+                      ? "Reserve Property"
+                      : approvedLeaseRequest
+                        ? "Lease Approved"
+                        : pendingLeaseRequest
+                          ? "Lease Requested"
+                          : "Request Lease"}
                   </h3>
                   <p className="text-xs text-gray-500 leading-relaxed italic">
                     {property.listing_type === "SALE" 
                       ? `Pay a reservation deposit of NGN ${property.minimum_holding_fee?.toLocaleString()} to hold this property while the owner or agent reviews the next steps.`
-                       : "Request lease terms from the owner or agent before making any rent payment. Rent is paid after approval and lease confirmation."}
+                       : approvedLeaseRequest
+                         ? pendingRentInvoice
+                           ? `Your request has been approved. Pay the rent invoice of NGN ${pendingRentInvoice.amount.toLocaleString()} to start the lease process.`
+                           : "Your request has been approved. Check your payments page for the generated rent invoice."
+                         : pendingLeaseRequest
+                           ? "Your lease request is waiting for the owner or agent review. Payment becomes available after approval."
+                           : "Request lease terms from the owner or agent before making any rent payment. Rent is paid after approval and lease confirmation."}
                   </p>
-                  <button 
-                    onClick={property.listing_type === "SALE" ? handleReservationIntent : handleLeaseRequest}
-                    disabled={paying || requestingLease || (property.listing_type === "RENT" && leaseAlreadyRequested)}
-                    className="w-full bg-white text-black font-black py-4 rounded-2xl hover:bg-primary transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                  >
-                    {paying || requestingLease ? <Loader2 className="animate-spin" size={16} /> : (property.listing_type === "SALE" ? "Pay Reservation Deposit" : leaseAlreadyRequested ? "Requested" : "Request Lease")}
-                  </button>
+                  {property.listing_type === "RENT" && approvedLeaseRequest ? (
+                    <button
+                      type="button"
+                      onClick={() => router.push("/tenant/payments")}
+                      className="w-full bg-primary text-black font-black py-4 rounded-2xl hover:bg-primary-hover transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2"
+                    >
+                      <CreditCard size={16} />
+                      {pendingRentInvoice ? "Pay Rent Invoice" : "Open Payments"}
+                    </button>
+                  ) : (
+                    <button 
+                      onClick={property.listing_type === "SALE" ? handleReservationIntent : handleLeaseRequest}
+                      disabled={paying || requestingLease || Boolean(pendingLeaseRequest)}
+                      className="w-full bg-white text-black font-black py-4 rounded-2xl hover:bg-primary transition-all uppercase tracking-widest text-xs flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                    >
+                      {paying || requestingLease ? <Loader2 className="animate-spin" size={16} /> : (property.listing_type === "SALE" ? "Pay Reservation Deposit" : pendingLeaseRequest ? "Requested" : "Request Lease")}
+                    </button>
+                  )}
                   <div className="h-[1px] bg-white/10 w-full" />
                 </div>
               )}

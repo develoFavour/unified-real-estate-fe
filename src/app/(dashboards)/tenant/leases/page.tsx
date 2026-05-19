@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, CalendarDays, CheckCircle2, FileText, Home, Loader2, ReceiptText } from "lucide-react";
+import { ArrowLeft, CalendarDays, CheckCircle2, CreditCard, FileText, Home, Loader2, ReceiptText } from "lucide-react";
 import Link from "next/link";
 import { api } from "@/lib/api/methods";
 import { ENDPOINTS } from "@/constants/endpoints.const";
@@ -190,6 +190,15 @@ export default function TenantLeasesPage() {
                     {request.message && <p className="text-xs text-gray-600 mt-2 max-w-2xl">{request.message}</p>}
                   </div>
                   <div className="flex items-center gap-3">
+                    {request.status === "APPROVED" && (
+                      <Link
+                        href="/tenant/payments"
+                        className="inline-flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
+                      >
+                        <CreditCard size={13} />
+                        Pay Invoice
+                      </Link>
+                    )}
                     <span className={cn(
                       "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
                       request.status === "APPROVED" ? "bg-green-500/10 text-green-500" :
