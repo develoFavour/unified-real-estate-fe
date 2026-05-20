@@ -37,18 +37,28 @@ interface LeaseRequest {
   };
 }
 
+interface Invoice {
+  id: string;
+  property_id: string;
+  lease_request_id?: string | null;
+  type: string;
+  status: string;
+}
+
 const formatCurrency = (amount: number) => `NGN ${amount.toLocaleString()}`;
 
 export default function TenantLeasesPage() {
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [leaseRequests, setLeaseRequests] = useState<LeaseRequest[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = async () => {
     try {
-      const [dashboardRes, requestRes] = await Promise.allSettled([
+      const [dashboardRes, requestRes, invoiceRes] = await Promise.allSettled([
         api.get<DashboardData>(ENDPOINTS.TENANT.DASHBOARD),
         api.get<LeaseRequest[]>("/tenant/lease-requests"),
+        api.get<Invoice[]>("/tenant/invoices"),
       ]);
 
       if (dashboardRes.status === "fulfilled") {
@@ -56,6 +66,9 @@ export default function TenantLeasesPage() {
       }
       if (requestRes.status === "fulfilled") {
         setLeaseRequests(requestRes.value || []);
+      }
+      if (invoiceRes.status === "fulfilled") {
+        setInvoices(invoiceRes.value || []);
       }
     } catch (err) {
       console.error("Failed to load tenant leases", err);
@@ -79,6 +92,18 @@ export default function TenantLeasesPage() {
   }
 
   const activeLease = dashboard?.lease;
+  const getRequestPaymentState = (request: LeaseRequest) => {
+    const relatedInvoices = invoices.filter((invoice) => (
+      invoice.type === "RENT" &&
+      (invoice.lease_request_id === request.id || invoice.property_id === request.property?.id)
+    ));
+    const payableInvoice = relatedInvoices.find((invoice) => invoice.status === "PENDING" || invoice.status === "OVERDUE");
+    const paidInvoice = relatedInvoices.find((invoice) => invoice.status === "PAID");
+
+    if (payableInvoice) return "PAYABLE";
+    if (paidInvoice) return "PAID";
+    return "NONE";
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in duration-700">
@@ -190,14 +215,20 @@ export default function TenantLeasesPage() {
                     {request.message && <p className="text-xs text-gray-600 mt-2 max-w-2xl">{request.message}</p>}
                   </div>
                   <div className="flex items-center gap-3">
-                    {request.status === "APPROVED" && (
+                    {request.status === "APPROVED" && getRequestPaymentState(request) === "PAYABLE" && (
                       <Link
                         href="/tenant/payments"
                         className="inline-flex items-center gap-2 bg-primary text-black px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-primary-hover transition-all"
                       >
                         <CreditCard size={13} />
-                        Pay Invoice
+                        Pay Rent Invoice
                       </Link>
+                    )}
+                    {request.status === "APPROVED" && getRequestPaymentState(request) === "PAID" && (
+                      <span className="inline-flex items-center gap-2 bg-green-500/10 text-green-500 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest">
+                        <CheckCircle2 size={13} />
+                        Payment Complete
+                      </span>
                     )}
                     <span className={cn(
                       "px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",

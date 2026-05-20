@@ -94,6 +94,22 @@ const formatLabel = (value?: string) => {
   return value ? value.replaceAll("_", " ") : "";
 };
 
+const getInvoicePaymentLabel = (invoice: Invoice) => {
+  if (invoice.type === "RENT" && invoice.billing_period_start) return "Pay Renewal Rent";
+  if (invoice.type === "RENT") return "Pay Move-In Rent";
+  return `Pay ${formatLabel(invoice.type).toLowerCase()}`;
+};
+
+const getInvoiceContextText = (invoice: Invoice) => {
+  if (invoice.type === "RENT" && invoice.billing_period_start) {
+    return "Renewal rent for an existing lease period.";
+  }
+  if (invoice.type === "RENT") {
+    return "This is the required rent payment after lease approval. Once paid, the workflow moves to document handover.";
+  }
+  return invoice.description || "Extra charge issued for this property or lease.";
+};
+
 const getPaymentContext = (tx: WalletTransaction, invoice?: Invoice) => {
   const meta = parseTransactionMeta(tx);
   if (invoice) {
@@ -384,9 +400,7 @@ export default function TenantPaymentsPage() {
                       </span>
                     </div>
                     <h4 className="text-xl font-bold text-white">{invoice.property?.title || "Property Invoice"}</h4>
-                    <p className="text-xs text-gray-500 leading-relaxed">
-                      {invoice.description || "Invoice generated from an approved lease request."}
-                    </p>
+                    <p className="text-xs text-gray-500 leading-relaxed">{getInvoiceContextText(invoice)}</p>
                   </div>
                   <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shrink-0">
                     <CreditCard size={20} />
@@ -406,7 +420,7 @@ export default function TenantPaymentsPage() {
                     disabled={payingInvoiceID === invoice.id}
                     className="bg-white text-black font-black px-5 py-3 rounded-2xl hover:bg-primary transition-all uppercase tracking-widest text-xs flex items-center gap-2 disabled:opacity-60"
                   >
-                    {payingInvoiceID === invoice.id ? <Loader2 className="animate-spin" size={16} /> : "Pay Invoice"}
+                    {payingInvoiceID === invoice.id ? <Loader2 className="animate-spin" size={16} /> : getInvoicePaymentLabel(invoice)}
                   </button>
                 </div>
               </div>
