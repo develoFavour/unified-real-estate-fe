@@ -19,7 +19,7 @@ let refreshPromise: Promise<RefreshResponse> | null = null;
 
 export const apiClient = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000,
+  timeout: 30000,
 });
 
 apiClient.interceptors.request.use(

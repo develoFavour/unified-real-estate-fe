@@ -13,7 +13,12 @@ import {
   Briefcase,
   Search,
   FileText,
-  MessageSquare
+  MessageSquare,
+  ShieldCheck,
+  UserCog,
+  BarChart3,
+  AlertTriangle,
+  LifeBuoy
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Logo } from "./logo";
@@ -31,6 +36,17 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
   const getNavItems = () => {
     switch (role) {
+      case "SUPER_ADMIN":
+        return [
+          { label: "Command Center", icon: LayoutDashboard, href: "/admin" },
+          { label: "Approvals", icon: ShieldCheck, href: "/admin/approvals" },
+          { label: "Users", icon: UserCog, href: "/admin/users" },
+          { label: "Properties", icon: Building2, href: "/admin/properties" },
+          { label: "Payments", icon: BarChart3, href: "/admin/reports" },
+          { label: "Leases", icon: FileText, href: "/admin/leases" },
+          { label: "Sales", icon: Wallet, href: "/admin/sales" },
+          { label: "Disputes", icon: AlertTriangle, href: "/admin/disputes" },
+        ];
       case "OWNER":
         return [
           { label: "Overview", icon: LayoutDashboard, href: "/owner" },
@@ -40,6 +56,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           { label: "Messages", icon: MessageSquare, href: "/messages" },
           { label: "Maintenance", icon: Wrench, href: "/owner/maintenance" },
           { label: "Revenue", icon: Wallet, href: "/owner/payments" },
+          { label: "Support", icon: LifeBuoy, href: "/owner/support" },
         ];
       case "AGENT":
         return [
@@ -49,6 +66,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           { label: "Messages", icon: MessageSquare, href: "/messages" },
           { label: "Work Orders", icon: Wrench, href: "/agent/maintenance" },
           { label: "Earnings", icon: Wallet, href: "/agent/payments" },
+          { label: "Support", icon: LifeBuoy, href: "/agent/support" },
         ];
       case "TENANT":
         return [
@@ -59,6 +77,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
           { label: "Maintenance", icon: Wrench, href: "/tenant/maintenance" },
           { label: "Payments", icon: Wallet, href: "/tenant/payments" },
           { label: "Savings Wallet", icon: Wallet, href: "/tenant/wallet" },
+          { label: "Support", icon: LifeBuoy, href: "/tenant/support" },
           { label: "Find a Home", icon: Search, href: "/properties" },
         ];
       default:
@@ -107,7 +126,7 @@ export function Sidebar({ className, onNavigate }: SidebarProps) {
 
       <div className="p-6 mt-auto border-t border-white/5 space-y-2">
         <Link
-          href={role === "TENANT" ? "/tenant/settings" : "/settings"}
+          href={role === "TENANT" ? "/tenant/settings" : role === "SUPER_ADMIN" ? "/admin/settings" : "/settings"}
           onClick={onNavigate}
           className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-gray-500 hover:text-white hover:bg-white/5 transition-all group"
         >

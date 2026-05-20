@@ -6,6 +6,7 @@ import { api } from "@/lib/api/methods";
 import { toast } from "sonner";
 import { CustomSelect } from "@/components/ui/custom-select";
 import { cn } from "@/lib/utils";
+import { ENDPOINTS } from "@/constants/endpoints.const";
 
 interface TransactionDocument {
   id: string;
@@ -122,6 +123,7 @@ export function StakeholderLeaseDocumentsPanel({ targets }: { targets: LeaseTarg
   });
   const [uploading, setUploading] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [fileInputKey, setFileInputKey] = useState(0);
   const eligibleTargets = targets.filter((target) => target.lease_id);
   const selectedTarget = eligibleTargets.find((item) => item.key === form.target);
   const targetOptions = eligibleTargets.map((target) => ({ id: target.key, label: target.label }));
@@ -134,9 +136,11 @@ export function StakeholderLeaseDocumentsPanel({ targets }: { targets: LeaseTarg
     try {
       const docs = await api.get<TransactionDocument[]>("/transaction-documents", { lease_id: leaseId });
       setDocuments(docs || []);
+      return docs || [];
     } catch (err) {
       console.error("Failed to fetch lease documents", err);
       toast.error("Unable to load lease document checklist.");
+      return [];
     } finally {
       setLoadingDocuments(false);
     }
@@ -166,8 +170,16 @@ export function StakeholderLeaseDocumentsPanel({ targets }: { targets: LeaseTarg
         type: form.type,
         document_url: form.document_url,
       });
-      setForm((current) => ({ ...current, title: "", document_url: "" }));
-      await fetchDocuments(selectedTarget.lease_id);
+      const updatedDocuments = await fetchDocuments(selectedTarget.lease_id);
+      const updatedTypes = new Set(updatedDocuments.map((document) => document.type));
+      const nextMissing = REQUIRED_LEASE_DOCUMENTS.find((document) => !updatedTypes.has(document.id));
+      setForm((current) => ({
+        ...current,
+        title: "",
+        document_url: "",
+        type: nextMissing?.id || current.type,
+      }));
+      setFileInputKey((current) => current + 1);
       toast.success("Lease document uploaded.");
     } catch (err) {
       console.error("Failed to upload lease document", err);
@@ -184,7 +196,7 @@ export function StakeholderLeaseDocumentsPanel({ targets }: { targets: LeaseTarg
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await api.post<{ url: string }>("/upload/document", formData);
+      const res = await api.post<{ url: string }>(ENDPOINTS.UPLOAD.DOCUMENT, formData);
       setForm((current) => ({
         ...current,
         title: current.title || getDocumentLabel(current.type),
@@ -310,6 +322,7 @@ export function StakeholderLeaseDocumentsPanel({ targets }: { targets: LeaseTarg
           {uploadingFile ? <Loader2 size={14} className="animate-spin text-primary" /> : <Upload size={14} className="text-primary" />}
           <span className="truncate">{form.document_url ? "Uploaded" : "Choose File"}</span>
           <input
+            key={fileInputKey}
             type="file"
             hidden
             accept=".pdf,.doc,.docx,.png,.jpg,.jpeg"

@@ -68,7 +68,7 @@ export const authApi = {
   },
 
   verifyEmail: (token: string) => {
-    return api.post(ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
+    return api.post<User>(ENDPOINTS.AUTH.VERIFY_EMAIL, { token });
   },
 
   forgotPassword: (email: string) => {

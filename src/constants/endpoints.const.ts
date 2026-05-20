@@ -27,6 +27,10 @@ export const ENDPOINTS = {
     CLOSE: (id: string) => `/maintenance/${id}/close`,
     REOPEN: (id: string) => `/maintenance/${id}/reopen`,
   },
+  UPLOAD: {
+    IMAGE: "/upload/image",
+    DOCUMENT: "/upload/document",
+  },
   INCOME: {
     OWNER: "/payments/owner",
   },
@@ -39,6 +43,24 @@ export const ENDPOINTS = {
   TENANT: {
     DASHBOARD: "/tenant/dashboard",
     PAYMENTS: "/tenant/payments",
+  },
+  ADMIN: {
+    SUMMARY: "/admin/summary",
+    USERS: "/admin/users",
+    PENDING_AGENTS: "/admin/users/pending-agents",
+    USER_STATUS: (id: string) => `/admin/users/${id}/status`,
+    PROPERTIES: "/admin/properties",
+    PROPERTY_MODERATION: (id: string) => `/admin/properties/${id}/moderation`,
+    PAYMENTS: "/admin/payments",
+    LEASES: "/admin/leases",
+    SALES: "/admin/sales",
+    DISPUTES: "/admin/disputes",
+  },
+  DISPUTES: {
+    BASE: "/disputes",
+    MINE: "/disputes/mine",
+    RESOLVE: (id: string) => `/disputes/${id}/resolve`,
+    RESPOND: (id: string) => `/disputes/${id}/respond`,
   },
   MESSAGES: {
     CONVERSATIONS: "/messages/conversations",
